@@ -7,15 +7,23 @@ import org.skypro.skyshop.service.SearchService;
 import org.skypro.skyshop.service.StorageService;
 import org.springframework.web.bind.annotation.*;
 import java.util.Collection;
+import org.skypro.skyshop.model.basket.UserBasket;
+import org.skypro.skyshop.service.BasketService;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.UUID;
 
 @RestController
 public class ShopController {
     private final StorageService storageService;
     private final SearchService searchService;
+    private final BasketService basketService; // <-- НОВАЯ ЗАВИСИМОСТЬ
 
-    public ShopController(StorageService storageService, SearchService searchService) {
+    public ShopController(StorageService storageService, SearchService searchService, BasketService basketService) {
         this.storageService = storageService;
         this.searchService = searchService;
+        this.basketService = basketService; // <-- Инициализация новой зависимости
     }
 
     @GetMapping("/products")
@@ -32,4 +40,22 @@ public class ShopController {
     public Collection<SearchResult> search(@RequestParam String pattern) {
         return searchService.search(pattern);
     }
+
+    @GetMapping("/basket/{id}")
+    public String addProduct(@PathVariable("id") UUID id) {
+        try {
+            basketService.addProductToBasket(id);
+            return "Продукт успешно добавлен";
+        } catch (IllegalArgumentException e) {
+            // Возвращаем ошибку 400 (Bad Request), если товара нет в базе
+            throw new ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    @GetMapping("/basket")
+    public UserBasket getUserBasket() {
+        return basketService.getUserBasket();
+    }
+
 }
