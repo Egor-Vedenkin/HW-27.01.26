@@ -3,43 +3,42 @@ package org.skypro.skyshop.model.basket;
 import org.skypro.skyshop.model.product.Product;
 import org.skypro.skyshop.service.StorageService;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
-public final class UserBasket {
-    private final List<BasketItem> items;
+public class UserBasket {
+
+    private final List<BasketItem> items; // Только список товаров корзины.
+
+    // Итоговая стоимость корзины.
     private final int total;
 
+    // Приватный конструктор — только через фабричный метод.
     private UserBasket(List<BasketItem> items, int total) {
         this.items = items;
         this.total = total;
     }
 
-    public List<BasketItem> getItems() {
-        return items;
-    }
+    // Фабричный метод для создания UserBasket из списка BasketItem.
+    // Здесь же происходит подсчёт total.
+    public static UserBasket fromBasketItems(List<BasketItem> items, StorageService storageService) {
 
-    public int getTotal() {
-        return total;
-    }
-
-    public static UserBasket fromProductBasket(ProductBasket basket, StorageService storage) {
-        Map<UUID, Integer> map = basket.getItems();
-
-        List<BasketItem> items = map.entrySet().stream()
-                .map(entry -> {
-                    UUID id = entry.getKey();
-                    int qty = entry.getValue();
-                    Product prod = storage.getProductById(id).orElseThrow(); // Безопасно, так как товары добавлялись через сервис
-                    return new BasketItem(prod, qty);
-                })
-                .collect(Collectors.toList());
-
-        int total = items.stream()
-                .mapToInt(item -> item.getProduct().getPrice() * item.getQuantity())
-                .sum();
+        // Подсчёт общей суммы через StreamAPI.
+        int total = calculateTotal(items, storageService);
 
         return new UserBasket(items, total);
     }
-}
+
+    // Выделен отдельный метод для подсчёта total.
+    private static int calculateTotal(List<BasketItem> items, StorageService storageService) {
+
+        return items.stream()
+                .mapToInt(item -> {
+                    Product product = storageService.getAllProducts().stream()
+                            .filter(p -> p.getId().equals(item.getProductId()))
+                            .findFirst()
+                            .orElseThrow(() -> new IllegalStateException("Товар не найден"));
+                    return product.getPrice() * item.getQuantity();
+                })
+                .sum();
+        }
+    }

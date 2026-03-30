@@ -3,7 +3,6 @@ package org.skypro.skyshop.model.product;
 import java.util.UUID;
 
 public class DiscountedProduct extends Product {
-
     private final int discountPercent;
     private int basePrice;
     private int salePrice;
@@ -18,12 +17,11 @@ public class DiscountedProduct extends Product {
         }
         this.basePrice = price;
         this.discountPercent = discountPercent;
-        calculateSalePrice(); // Расчет финальной цены при создании объекта
+        calculateSalePrice(); // Расчёт финальной цены при создании объекта
     }
 
     private void calculateSalePrice() {
-        // salePrice = (int) (basePrice * (100 - discountPercent) / 100.0);
-        salePrice = (int) (basePrice * 0.9); // Скидка 10% (как в исходном задании)
+        salePrice = (int) (basePrice * (100 - discountPercent) / 100.0);
     }
 
     @Override
@@ -38,7 +36,6 @@ public class DiscountedProduct extends Product {
 
     @Override
     public String toString() {
-        // Расчет фактического процента скидки для вывода, так как в расчете используется 10%
         double actualDiscountPercentage = ((double) (basePrice - salePrice)) / basePrice * 100;
         return getTitle() + ": " + salePrice + " (" + Math.round(actualDiscountPercentage) + "%)";
     }
