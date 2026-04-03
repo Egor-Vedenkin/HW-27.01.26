@@ -1,44 +1,34 @@
 package org.skypro.skyshop.model.basket;
 
-import org.skypro.skyshop.model.product.Product;
-import org.skypro.skyshop.service.StorageService;
 import java.util.List;
-import java.util.stream.Collectors;
 
-public class UserBasket {
-
-    private final List<BasketItem> items; // Только список товаров корзины.
-
-    // Итоговая стоимость корзины.
+public final class UserBasket {
+    private final List<BasketItem> items;
     private final int total;
 
-    // Приватный конструктор — только через фабричный метод.
-    private UserBasket(List<BasketItem> items, int total) {
+    // Конструктор: принимает только items, total считается через отдельный метод
+    private UserBasket(List<BasketItem> items) {
         this.items = items;
-        this.total = total;
+        this.total = calculateTotal(items);
     }
 
-    // Фабричный метод для создания UserBasket из списка BasketItem.
-    // Здесь же происходит подсчёт total.
-    public static UserBasket fromBasketItems(List<BasketItem> items, StorageService storageService) {
-
-        // Подсчёт общей суммы через StreamAPI.
-        int total = calculateTotal(items, storageService);
-
-        return new UserBasket(items, total);
+    public List<BasketItem> getItems() {
+        return items;
     }
 
-    // Выделен отдельный метод для подсчёта total.
-    private static int calculateTotal(List<BasketItem> items, StorageService storageService) {
+    public int getTotal() {
+        return total;
+    }
 
+    // Статический метод подсчёта общей стоимости — принимает список элементов
+    private static int calculateTotal(List<BasketItem> items) {
         return items.stream()
-                .mapToInt(item -> {
-                    Product product = storageService.getAllProducts().stream()
-                            .filter(p -> p.getId().equals(item.getProductId()))
-                            .findFirst()
-                            .orElseThrow(() -> new IllegalStateException("Товар не найден"));
-                    return product.getPrice() * item.getQuantity();
-                })
+                .mapToInt(item -> item.getProduct().getPrice() * item.getQuantity())
                 .sum();
-        }
     }
+
+    // Фабричный метод для создания корзины из списка — единственный публичный способ создания
+    public static UserBasket fromItems(List<BasketItem> items) {
+        return new UserBasket(items);
+    }
+}
