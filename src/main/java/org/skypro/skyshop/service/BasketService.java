@@ -1,51 +1,50 @@
-package org.skypro.skyshop.service;
+package org.skypro.skyshop.model.basket;
 
-import org.skypro.skyshop.model.basket.BasketItem;
-import org.skypro.skyshop.model.basket.ProductBasket;
-import org.skypro.skyshop.model.basket.UserBasket;
 import org.skypro.skyshop.model.product.Product;
-import org.springframework.stereotype.Service;
-
+import org.skypro.skyshop.service.StorageService;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Service
-public class BasketService {
+public final class UserBasket {
+    private final List<BasketItem> items;
+    private final int total;
 
-    private final ProductBasket productBasket;
-    private final StorageService storageService;
-
-    public BasketService(ProductBasket productBasket, StorageService storageService) {
-        this.productBasket = productBasket;
-        this.storageService = storageService;
+    // Конструктор принимает только список товаров
+    private UserBasket(List<BasketItem> items) {
+        this.items = items;
+        this.total = calculateTotal(items); // Сумма считается внутри
     }
 
-    // Метод для добавления товара в корзину
-    public void addProductToBasket(UUID productId) {
-        Product product = storageService.getProductById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
-        productBasket.addProduct(product.getId());
+    public List<BasketItem> getItems() {
+        return items;
     }
 
-    // Основной метод — реализует всю логику внутри
-    public UserBasket getUserBasket() {
-        // Получаем содержимое корзины (Map<UUID, Integer>)
-        Map<UUID, Integer> basketItems = productBasket.getItems();
+    public int getTotal() {
+        return total;
+    }
 
-        // Преобразуем в список BasketItem
-        List<BasketItem> items = basketItems.entrySet().stream()
+    // Статический фабричный метод для создания из ProductBasket
+    public static UserBasket fromProductBasket(ProductBasket basket, StorageService storage) {
+        Map<UUID, Integer> map = basket.getItems();
+
+        List<BasketItem> items = map.entrySet().stream()
                 .map(entry -> {
-                    UUID productId = entry.getKey();
-                    int quantity = entry.getValue();
-                    Product product = storageService.getProductById(productId)
-                            .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
-                    return new BasketItem(product, quantity);
+                    UUID id = entry.getKey();
+                    int qty = entry.getValue();
+                    Product prod = storage.getProductById(id).orElseThrow();
+                    return new BasketItem(prod, qty);
                 })
                 .collect(Collectors.toList());
 
-        // Создаём UserBasket через фабричный метод
-        return UserBasket.fromItems(items);
+        return new UserBasket(items);
+    }
+
+    // Выделенный метод для подсчета суммы (по требованию)
+    private static int calculateTotal(List<BasketItem> items) {
+        return items.stream()
+                .mapToInt(item -> item.getProduct().getPrice() * item.getQuantity())
+                .sum();
     }
 }
